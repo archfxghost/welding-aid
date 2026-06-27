@@ -25,7 +25,6 @@
         .streak-val { color: #ffcc00; font-weight: bold; }
         .max-val { color: #3399ff; font-weight: bold; }
         
-        /* Puddle Status Colors */
         .status-none { color: #a0a0a0; }
         .status-cold { color: #3399ff; }
         .status-good { color: #00ff00; }
@@ -117,7 +116,7 @@
 
         function updatePuddleStatus() {
             const puddle = document.getElementById('puddle');
-            puddle.className = ''; // Reset classes
+            puddle.className = '';
             
             if (streak === 0) {
                 puddle.innerText = "[ NO ARC ]";
@@ -141,14 +140,18 @@
             const qList = document.getElementById('questions-list');
             const aList = document.getElementById('answers-list');
             
-            qList.innerHTML = quiz.map((item, i) => 
-                `<div class="item"><span class="num">${i + 1}.</span> ${item.q}</div>`
-            ).join('');
+            let qHTML = "";
+            for(let i=0; i<quiz.length; i++) {
+                qHTML += '<div class="item"><span class="num">' + (i + 1) + '.</span> ' + quiz[i].q + '</div>';
+            }
+            qList.innerHTML = qHTML;
 
-            aList.innerHTML = mapping.map((scrambledIdx, i) => {
-                const letter = String.fromCharCode(65 + i);
-                return `<div class="item"><span class="let">${letter}.</span> ${quiz[scrambledIdx].a}</div>`;
-            ).join('');
+            let aHTML = "";
+            for(let i=0; i<mapping.length; i++) {
+                let letter = String.fromCharCode(65 + i);
+                aHTML += '<div class="item"><span class="let">' + letter + '.</span> ' + quiz[mapping[i]].a + '</div>';
+            }
+            aList.innerHTML = aHTML;
         }
 
         function playSound(freq, duration) {
@@ -159,7 +162,220 @@
                 osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
                 osc.start();
                 osc.stop(audioCtx.currentTime + duration);
-            } catch (e) { console.log("Audio not supported yet"); }
+            } catch (e) { console.log("Audio feedback restricted"); }
+        }
+
+        function checkCircuit() {
+            const pA = parseInt(document.getElementById('probeA').value) - 1;
+            const pBLetter = document.getElementById('probeB').value.toUpperCase();
+            const pB = pBLetter.charCodeAt(0) - 65;
+            const buzzer = document.getElementById('buzzer');
+
+            if (isNaN(pA) || pA < 0 || pA >= quiz.length || isNaN(pB) || pB < 0 || pB >= quiz.length) {
+                buzzer.innerHTML = "<span class='error'>[!] Bad contact. Clean your metal...</span>";
+                return;
+            }
+
+            attempts++;
+
+            if (mapping[pB] === pA) {
+                score++;
+                streak++;
+                if (streak > max_streak) max_streak = streak;
+                
+                if (streak >= 5) {
+                    buzzer.innerHTML = "<span class='success'>⚡ [ SUPER ARC ] PERFECT STREAK CONTINUES!!</span>";
+                    playSound(1200, 0.15);
+                } else {
+                    buzzer.innerHTML = "<span class='success'>⚡ [ ARC STRUCK ] SOLID WELD!</span>";
+                    playSound(800, 0.2);
+                }
+            } else {
+                streak = 0;
+                buzzer.innerHTML = "<span class='error'>⚠ [ SPATTER ] PUDDLE COOLED DOWN...</span>";
+                playSound(120, 0.4);
+            }
+
+            document.getElementById('score').innerText = score;
+            document.getElementById('attempts').innerText = attempts;
+            document.getElementById('streak').innerText = streak;
+            document.getElementById('max_streak').innerText = max_streak;
+            
+            updatePuddleStatus();
+            
+            document.getElementById('probeA').value = '';
+            document.getElementById('probeB').value = '';
+        }
+
+        displayBoard();
+    </script>
+</body>
+</html>
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Retro Welding Aid</title>
+    <style>
+        body {
+            background-color: #0b0b0f;
+            color: #f0f0f0;
+            font-family: 'Courier New', Courier, monospace;
+            padding: 15px;
+            max-width: 480px;
+            margin: 0 auto;
+        }
+        .header-box {
+            border-bottom: 1px dashed #303030;
+            padding-bottom: 10px;
+            margin-bottom: 15px;
+        }
+        h1 { color: #00ffcc; font-size: 1.1rem; margin: 0 0 5px 0; text-align: center; }
+        .stats { font-size: 0.95rem; line-height: 1.4; }
+        .score-val { color: #00ff00; font-weight: bold; }
+        .attempt-val { color: #ff00ff; font-weight: bold; }
+        .streak-val { color: #ffcc00; font-weight: bold; }
+        .max-val { color: #3399ff; font-weight: bold; }
+        
+        .status-none { color: #a0a0a0; }
+        .status-cold { color: #3399ff; }
+        .status-good { color: #00ff00; }
+        .status-fluid { color: #ffcc00; font-weight: bold; }
+        .status-super { color: #ff3333; font-weight: bold; animation: blink 0.6s infinite; }
+
+        h2 { color: #3399ff; font-size: 0.95rem; margin: 15px 0 5px 0; text-transform: uppercase; letter-spacing: 1px; }
+        .item { margin: 6px 0; font-size: 0.9rem; line-height: 1.3; }
+        .num { color: #00ff00; font-weight: bold; }
+        .let { color: #ff00ff; font-weight: bold; }
+        
+        .controls { display: flex; gap: 8px; margin-top: 15px; }
+        input {
+            background: #14141f;
+            border: 1px solid #ffcc00;
+            color: #fff;
+            padding: 8px;
+            font-family: inherit;
+            width: 100%;
+            text-align: center;
+            border-radius: 4px;
+            font-size: 0.9rem;
+        }
+        button {
+            background: #ffcc00;
+            color: #000;
+            border: none;
+            padding: 8px 16px;
+            font-family: inherit;
+            font-weight: bold;
+            cursor: pointer;
+            border-radius: 4px;
+        }
+        #buzzer {
+            text-align: center;
+            font-weight: bold;
+            font-size: 0.9rem;
+            height: 25px;
+            margin-top: 15px;
+        }
+        .success { color: #00ff00; }
+        .error { color: #ff3333; }
+        @keyframes blink { 0%, 100% { opacity: 1; } 50% { opacity: 0; } }
+    </style>
+</head>
+<body>
+
+    <div class="header-box">
+        <h1>★ WELDING AID BY MADISON S. ★</h1>
+        <div class="stats">
+            <div>Strikes: <span id="score" class="score-val">0</span> / Arcs: <span id="attempts" class="attempt-val">0</span></div>
+            <div>Current Streak: <span id="streak" class="streak-val">0</span> | Max Run: <span id="max_streak" class="max-val">0</span></div>
+            <div>Puddle: <span id="puddle" class="status-none">[ NO ARC ]</span></div>
+        </div>
+    </div>
+
+    <h2>🧲 GROUND CLAMP: QUESTIONS</h2>
+    <div id="questions-list"></div>
+
+    <h2>🔥 STINGER (ELECTRODE): SCRAMBLED</h2>
+    <div id="answers-list"></div>
+
+    <h2>🔌 STRIKE ARC</h2>
+    <div class="controls">
+        <input type="number" id="probeA" placeholder="Clamp (Q#)" min="1">
+        <input type="text" id="probeB" placeholder="Stinger (Letter)" maxlength="1">
+        <button onclick="checkCircuit()">STRIKE</button>
+    </div>
+
+    <div id="buzzer"></div>
+
+    <script>
+        const quiz = [
+            { q: "What does the '60' stand for in an E6010 electrode?", a: "60,000 PSI Tensile Strength" },
+            { q: "Which welding process uses a non-consumable tungsten electrode?", a: "TIG (GTAW)" },
+            { q: "What is the standard shielding gas mix for short-circuit MIG?", a: "75% Argon / 25% CO2" },
+            { q: "What minimum lens shade is recommended for most arc welding?", a: "Shade 10 to 11" },
+            { q: "What type of current is most commonly used for stick aluminum?", a: "AC (Alternating Current)" },
+            { q: "What defect is caused by trapping gas bubbles inside the weld?", a: "Porosity" },
+            { q: "What is the term for the groove melted into the base metal?", a: "Undercut" }
+        ];
+
+        let score = 0;
+        let attempts = 0;
+        let streak = 0;
+        let max_streak = 0;
+        
+        let mapping = quiz.map((_, i) => i).sort(() => Math.random() - 0.5);
+
+        function updatePuddleStatus() {
+            const puddle = document.getElementById('puddle');
+            puddle.className = '';
+            
+            if (streak === 0) {
+                puddle.innerText = "[ NO ARC ]";
+                puddle.classList.add('status-none');
+            } else if (streak < 3) {
+                puddle.innerText = "[ COLD PUDDLE ]";
+                puddle.classList.add('status-cold');
+            } else if (streak < 5) {
+                puddle.innerText = "[ GOOD PENETRATION ]";
+                puddle.classList.add('status-good');
+            } else if (streak < 7) {
+                puddle.innerText = "[ 🔥 FLUID HEAT 🔥 ]";
+                puddle.classList.add('status-fluid');
+            } else {
+                puddle.innerText = "[ ⚡ WHITE HOT SUPER HEAT ⚡ ]";
+                puddle.classList.add('status-super');
+            }
+        }
+
+        function displayBoard() {
+            const qList = document.getElementById('questions-list');
+            const aList = document.getElementById('answers-list');
+            
+            let qHTML = "";
+            for(let i=0; i<quiz.length; i++) {
+                qHTML += '<div class="item"><span class="num">' + (i + 1) + '.</span> ' + quiz[i].q + '</div>';
+            }
+            qList.innerHTML = qHTML;
+
+            let aHTML = "";
+            for(let i=0; i<mapping.length; i++) {
+                let letter = String.fromCharCode(65 + i);
+                aHTML += '<div class="item"><span class="let">' + letter + '.</span> ' + quiz[mapping[i]].a + '</div>';
+            }
+            aList.innerHTML = aHTML;
+        }
+
+        function playSound(freq, duration) {
+            try {
+                const audioCtx = new (window.AudioContext || window.webkitAudioContext)();
+                const osc = audioCtx.createOscillator();
+                osc.connect(audioCtx.destination);
+                osc.frequency.setValueAtTime(freq, audioCtx.currentTime);
+                osc.start();
+                osc.stop(audioCtx.currentTime + duration);
+            } catch (e) { console.log("Audio feedback restricted"); }
         }
 
         function checkCircuit() {
